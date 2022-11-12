@@ -26,16 +26,21 @@ public class Program
 
         try
         {
+            const string address = "http://localhost:6666";
+            
             Console.Title = "Server";
             var builder = WebApplication.CreateBuilder();
-            builder.WebHost.UseUrls("http://localhost:6666");
+            builder.WebHost.UseUrls();
             var app = builder.Build();
             app.UseWebSockets();
 
             var server = new Server();
 
+            app.Map("/", context => context.Response.WriteAsync("Hello"));
             app.Map("/ws", server.Handle);
 
+            Log.Information("Start listening on {Address}", address);
+            
             await app.RunAsync();
         }
         catch (Exception ex)

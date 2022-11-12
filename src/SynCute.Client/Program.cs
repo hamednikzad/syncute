@@ -27,6 +27,7 @@ public class Program
                 var buffer = new byte[256];
                 while (ws.State == WebSocketState.Open)
                 {
+                    Console.WriteLine("Waiting...");
                     var result = await ws.ReceiveAsync(buffer, CancellationToken.None);
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
