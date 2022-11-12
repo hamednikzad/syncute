@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SynCute.Core", "SynCute.Core\SynCute.Core.csproj", "{4BF46A30-020C-4E8C-85F3-D57B6567B2E6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SynCute.Client", "SynCute.Client\SynCute.Client.csproj", "{52458FB2-EFE7-45A3-B53B-42D0B203A0A5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SynCute.Server", "SynCute.Server\SynCute.Server.csproj", "{523E00F5-D05F-42D5-9BF7-9F0E2BA74559}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4BF46A30-020C-4E8C-85F3-D57B6567B2E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4BF46A30-020C-4E8C-85F3-D57B6567B2E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4BF46A30-020C-4E8C-85F3-D57B6567B2E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4BF46A30-020C-4E8C-85F3-D57B6567B2E6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{52458FB2-EFE7-45A3-B53B-42D0B203A0A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{52458FB2-EFE7-45A3-B53B-42D0B203A0A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{52458FB2-EFE7-45A3-B53B-42D0B203A0A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{52458FB2-EFE7-45A3-B53B-42D0B203A0A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{523E00F5-D05F-42D5-9BF7-9F0E2BA74559}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{523E00F5-D05F-42D5-9BF7-9F0E2BA74559}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{523E00F5-D05F-42D5-9BF7-9F0E2BA74559}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{523E00F5-D05F-42D5-9BF7-9F0E2BA74559}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
