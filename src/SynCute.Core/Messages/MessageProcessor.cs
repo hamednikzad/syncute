@@ -3,9 +3,9 @@ using SynCute.Core.Helpers;
 
 namespace SynCute.Core.Messages;
 
-public class MessageProcessor
+public static class MessageDeserializer
 {
-    public static Message? Process(string data)
+    public static Message? Deserialize(string data)
     {
         try
         {

@@ -4,7 +4,7 @@ using SynCute.Server;
 
 public class Server
 {
-    private Dictionary<Guid, SocketConnection> _connections;
+    private readonly Dictionary<Guid, SocketConnection> _connections;
 
     public Server()
     {

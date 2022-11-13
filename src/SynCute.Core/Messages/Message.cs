@@ -2,13 +2,13 @@ namespace SynCute.Core.Messages;
 
 public class Message
 {
-    public string Type { get; }
+    public string Command { get; }
     public List<string> Meta { get; protected set; }
     public string Content { get; protected set; }
 
-    protected Message(string type)
+    protected Message(string command)
     {
-        Type = type;
+        Command = command;
     }
     
     public string GetJson()
