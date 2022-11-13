@@ -10,6 +10,13 @@ public static class MessageDeserializer
         try
         {
             var message = JsonHelper.Deserialize<Message>(data);
+            if (message is null) return null;
+            
+            switch (message.Command)
+            {
+                case GetAllResourcesMessage.CommandName:
+                    return new GetAllResourcesMessage(message);
+            }
             return message;
         }
         catch (Exception e)

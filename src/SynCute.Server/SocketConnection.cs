@@ -13,20 +13,20 @@ public class SocketConnection
     public Guid Id { get; }
     private readonly WebSocket _socket;
     private readonly MessageProcessor _messageProcessor;
-    
+
     public SocketConnection(WebSocket socket)
     {
         Id = Guid.NewGuid();
         _socket = socket;
-        
+
         Log.Information("Connection with Id {Id} established", Id);
-        _messageProcessor = new MessageProcessor();
+        _messageProcessor = new MessageProcessor(Send);
         _messageProcessor.ConnectionClosed += id => ConnectionClosed?.Invoke(id);
         _messageProcessor.UnknownMessageReceived += async () => await Send("UnknownMessage");
     }
 
     private bool _isOpen;
-    
+
     public async Task Start()
     {
         _isOpen = true;
@@ -38,7 +38,7 @@ public class SocketConnection
             await WaitForReceive();
         }
     }
-    
+
     private async Task WaitForReceive()
     {
         var buffer = new ArraySegment<byte>(new Byte[8192]);
@@ -81,14 +81,14 @@ public class SocketConnection
         using var reader = new StreamReader(ms, Encoding.UTF8);
         var text = await reader.ReadToEndAsync();
         Log.Information("Receive message from {Id}:{Msg}", Id, text);
-        
+
         var message = MessageDeserializer.Deserialize(text);
-        
-        if(message is null)
+
+        if (message is null)
             return;
-        
+
         await _messageProcessor.Process(message);
-        
+
         MessageReceived?.Invoke(Id, text);
     }
 
@@ -106,15 +106,15 @@ public class SocketConnection
 
 public class MessageProcessor
 {
-    private readonly Action<string> _send;
+    private readonly Func<string, Task> _send;
     public event Action<Guid>? ConnectionClosed;
     public event Action? UnknownMessageReceived;
 
-    public MessageProcessor(Action<string> send)
+    public MessageProcessor(Func<string, Task> send)
     {
         _send = send;
     }
-    
+
     public async Task Process(Message message)
     {
         switch (message)
@@ -132,7 +132,6 @@ public class MessageProcessor
 
     private void OnGetAllResourcesMessageReceived()
     {
-        throw new NotImplementedException();
+        
     }
 }
-
