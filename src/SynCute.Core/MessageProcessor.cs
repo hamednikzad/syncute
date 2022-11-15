@@ -19,6 +19,12 @@ public abstract class MessageProcessor
 
     protected async Task UploadResources(List<Resource> resources)
     {
+        if (!resources.Any())
+        {
+            Log.Information("There is nothing to upload");
+            return;
+        }
+        
         foreach (var resource in resources)
         {
             await SendFile(resource);
@@ -27,6 +33,12 @@ public abstract class MessageProcessor
 
     protected async Task DownloadResources(List<Resource> resources)
     {
+        if (!resources.Any())
+        {
+            Log.Information("There is nothing to download");
+            return;
+        }
+
         await Send(MessageFactory
             .CreateDownloadResourcesJsonMessage(resources.Select(r => r.RelativePath).ToArray()));
     }
@@ -54,26 +66,28 @@ public abstract class MessageProcessor
             while ((numBytes = file.Read(fileChunk, 0, bufferSize)) > 0)
             {
                 var bytesToSend = new ReadOnlyMemory<byte>(fileChunk, 0, numBytes);
+                await _sendByteArray(bytesToSend, false);
                 bytesSoFar += numBytes;
                 var progress = (byte) (bytesSoFar * 100 / totalBytes);
                 count++;
-                if (progress > lastStatus && progress != 100)
+                if (progress >= lastStatus && progress != 100)
                 {
                     Log.Information("{Count} File sending progress:{Progress}", count, progress);
-                    lastStatus = progress;
-                    await _sendByteArray(bytesToSend, false);
+                    
                 }
                 else if (progress >= 100)
                 {
                     Log.Information("File sending completed {Count}", count);
-                    await _sendByteArray(bytesToSend, true);
                 }
                 else
                 {
-                    Log.Information("Unknown: Count:{Count}, progress:{progress}, lastStatus: {lastStatus}", count,
+                    Log.Information("Unknown: Count:{Count}, progress:{Progress}, lastStatus: {LastStatus}", count,
                         progress, lastStatus);
                 }
+                lastStatus = progress;
             }
+            await _sendByteArray(new ReadOnlyMemory<byte>(fileChunk, 0, 0), true);
+ 
         }
         catch (SocketException e)
         {

@@ -5,13 +5,11 @@ using SynCute.Core.Messages;
 using SynCute.Core.Messages.Behavioral;
 using SynCute.Core.Messages.Resources;
 
-namespace SynCute.Server;
+namespace SynCute.Server.Messages;
 
 public class ServerMessageProcessor : MessageProcessor
 {
     private readonly Func<string, Task> _send;
-    public event Action<Guid>? ConnectionClosed;
-    public event Action? UnknownMessageReceived;
 
     public ServerMessageProcessor(Func<string, Task> send, Func<ReadOnlyMemory<byte>, bool, Task> sendByteArray) : base(
         send, sendByteArray)
@@ -48,7 +46,7 @@ public class ServerMessageProcessor : MessageProcessor
 
     private async Task OnDownloadResourcesMessage(DownloadResourcesMessage message)
     {
-        var resources = ResourceHelper.GetResourcesWithRelativePath(message.Content.Files);
+        var resources = ResourceHelper.GetResourcesWithRelativePath(message.Content.Resources);
         await UploadResources(resources);
     }
 

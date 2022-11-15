@@ -1,10 +1,11 @@
 ﻿using System.Net.WebSockets;
 using System.Text;
 using Serilog;
+using SynCute.Client.Messages;
 using SynCute.Core.Helpers;
 using SynCute.Core.Messages;
 
-namespace SynCute.Client;
+namespace SynCute.Client.Connections;
 
 public class Client : IDisposable
 {
@@ -24,7 +25,7 @@ public class Client : IDisposable
 
     private async Task Send(string message)
     {
-        await _socket.SendAsync(Encoding.ASCII.GetBytes(message), WebSocketMessageType.Text,
+        await _socket.SendAsync(Encoding.UTF8.GetBytes(message), WebSocketMessageType.Text,
             true, _cancellationToken);
     }
 
@@ -72,7 +73,7 @@ public class Client : IDisposable
             try
             {
                 Log.Information("Connecting...");
-                await _socket.ConnectAsync(new Uri("ws://localhost:5000/ws"), _cancellationToken);
+                await _socket.ConnectAsync(new Uri("ws://localhost:5206/ws"), _cancellationToken);
                 _isOpen = true;
                 Log.Information("Successfully connected");
                 return;
@@ -92,12 +93,11 @@ public class Client : IDisposable
     {
         await Connect();
 
-        var t1 = Task.Run(async () =>
-        {
-
-        }, _cancellationToken);
-        
-        await SendGetAllResources();            
+        // var t1 = Task.Run(async () =>
+        // {
+        //
+        // }, _cancellationToken);
+                  
         while (_isOpen && _socket.State == WebSocketState.Open)
         {
             await WaitForReceive();
@@ -106,23 +106,7 @@ public class Client : IDisposable
 
     private async Task ProcessBinaryMessage(MemoryStream ms)
     {
-        await ResourceHelper.Write(ms);
-    }
-    
-    private async Task Sync()
-    {
-        //Get current files
-
-        //Compare
-
-        //Sync
-    }
-
-    private async Task SendGetAllResources()
-    {
-        Log.Information("Send GetAllResources message");
-        var message = MessageFactory.CreateGetAllResourcesJsonMessage();
-        await Send(message);
+        await ResourceHelper.WriteResource(ms);
     }
 
     public void Dispose()

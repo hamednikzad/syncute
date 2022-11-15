@@ -50,4 +50,14 @@ public static class MessageFactory
     {
         return JsonHelper.Serialize(new DownloadResourcesMessage(new DownloadResourcesContent(resources)), CaseType);
     }
+
+    public static string CreateReadyJsonMessage()
+    {
+        return JsonHelper.Serialize(new ReadyMessage(), CaseType);
+    }
+
+    public static string CreateNewResourceReceived(string resource)
+    {
+        return JsonHelper.Serialize(new NewResourceReceivedMessage(new NewResourceReceivedContent(resource)), CaseType);
+    }
 }

@@ -19,8 +19,7 @@ public static class MessageDeserializer
             {
                 return new BadMessage("Type is missing");
             }
-            
-            
+
             switch (type)
             {
                 case PingMessage.CommandName:
@@ -28,6 +27,9 @@ public static class MessageDeserializer
                     
                 case PongMessage.CommandName:
                     return new PongMessage();
+                    
+                case ReadyMessage.CommandName:
+                    return new ReadyMessage();
                     
                 case GetAllResourcesMessage.TypeName:
                     return new GetAllResourcesMessage();
@@ -48,6 +50,15 @@ public static class MessageDeserializer
                     
                     var downloadMessage = downloadContent.ToObject<DownloadResourcesContent>();
                     if (downloadMessage != null) return new DownloadResourcesMessage(downloadMessage);
+                    break;
+                
+                case NewResourceReceivedMessage.TypeName:
+                    var newResourceContent = parsedObject["Content"];
+                    if (newResourceContent == null)
+                        return new BadMessage("Content is missing");
+                    
+                    var newResourceMessage = newResourceContent.ToObject<NewResourceReceivedContent>();
+                    if (newResourceMessage != null) return new NewResourceReceivedMessage(newResourceMessage);
                     break;
                 
                 default:

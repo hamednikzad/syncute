@@ -2,10 +2,10 @@ namespace SynCute.Core.Messages.Resources;
 
 public class DownloadResourcesContent : MessageContent
 {
-    public string[] Files { get; }
+    public string[] Resources { get; }
     
-    public DownloadResourcesContent(string[] files)
+    public DownloadResourcesContent(string[] resources)
     {
-        Files = files;
+        Resources = resources;
     }
 }

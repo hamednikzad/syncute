@@ -6,7 +6,7 @@ using SynCute.Core.Messages.Behavioral;
 using SynCute.Core.Messages.Resources;
 using SynCute.Core.Models;
 
-namespace SynCute.Client;
+namespace SynCute.Client.Messages;
 
 public class ClientMessageProcessor : MessageProcessor
 {
@@ -28,12 +28,43 @@ public class ClientMessageProcessor : MessageProcessor
             case PongMessage:
                 OnPongMessage();
                 break;
+            case ReadyMessage:
+                await OnReadyMessage();
+                break;
             case AllResourcesListMessage allResourcesListMessage:
                 await OnAllResourcesListMessage(allResourcesListMessage);
+                break;
+            case NewResourceReceivedMessage newResourceReceivedMessage:
+                await OnNewResourceReceivedMessage(newResourceReceivedMessage);
                 break;
             default:
                 throw new Exception("Unknown message");
         }
+    }
+
+    private async Task OnNewResourceReceivedMessage(NewResourceReceivedMessage message)
+    {
+        Log.Information("NewResourceReceivedMessage: {NewResource}", message.Content.Resource);
+        
+        await DownloadResources(new List<Resource>()
+        {
+            new()
+            {
+                RelativePath = message.Content.Resource
+            }
+        });
+    }
+
+    private async Task OnReadyMessage()
+    {
+        await SendGetAllResources();
+    }
+
+    private async Task SendGetAllResources()
+    {
+        Log.Information("Send GetAllResources message");
+        var message = MessageFactory.CreateGetAllResourcesJsonMessage();
+        await Send(message);
     }
 
     private async Task OnBadMessage(BadMessage badMessage)

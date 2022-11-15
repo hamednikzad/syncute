@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Serilog;
+using SynCute.Server.Connections;
 
 namespace SynCute.Server;
 
@@ -26,8 +27,8 @@ public class Server
 
             connection.ConnectionClosed += ConnectionOnConnectionClosed;
 
-            connection.MessageReceived += async (connectionId, message) =>
-                await ConnectionOnMessageReceived(connectionId, message);
+            connection.NewResourceReceived += async (connectionId, resource) =>
+                await OnNewResourceReceived(connectionId, resource);
 
             _connections.Add(connection.Id, connection);
             await connection.Start();
@@ -37,13 +38,13 @@ public class Server
         context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
     }
 
-    private async Task ConnectionOnMessageReceived(Guid connectionId, string message)
+    private async Task OnNewResourceReceived(Guid connectionId, string resource)
     {
-        Log.Information("Server send message to Others on Thread {Thread}", Environment.CurrentManagedThreadId);
+        Log.Information("Server send message to others on Thread {Thread}", Environment.CurrentManagedThreadId);
 
         foreach (var connection in _connections.Where(c => c.Key != connectionId))
         {
-            await connection.Value.Send($"Message from {connectionId}: {message}");
+            await connection.Value.SendNewResourceReceived(resource);
         }
     }
 

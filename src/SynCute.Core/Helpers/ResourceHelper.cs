@@ -43,40 +43,28 @@ public static class ResourceHelper
         for (var i = 0; i < count; i++)
         {
             var file = files[i];
-            var fileInfo = new FileInfo(file);
-            var checksum = GetChecksum(HashingAlgoTypes.MD5, file);
-            var relativePath = RemoveExtraFromPath(file);
             
-            resources.Add(new Resource()
-            {
-                Checksum = checksum,
-                ResourceName = fileInfo.Name,
-                FullPath = file,
-                RelativePath = relativePath
-            });
+            resources.Add(GetResourceByFullPath(file));
         }
         
         return resources;
     }
 
-    public static string[,] GetAllFilesWithChecksumAsArray()
+    private static Resource GetResourceByFullPath(string file)
     {
-        var files = GetAllFilesWithChecksum();
-        var count = files.Count;
-        var result = new string[count,2];
+        var fileInfo = new FileInfo(file);
+        var checksum = GetChecksum(HashingAlgoTypes.MD5, file);
+        var relativePath = RemoveExtraFromPath(file);
 
-        for (var i = 0; i < count; i++)
+        return new Resource()
         {
-            var file = files[i];
-            var checksum = GetChecksum(HashingAlgoTypes.MD5, file.Checksum);
-            var relativePath = RemoveExtraFromPath(file.RelativePath);
-            result[i, 0] = relativePath;
-            result[i, 1] = checksum;
-        }
-
-        return result;
+            Checksum = checksum,
+            ResourceName = fileInfo.Name,
+            FullPath = file,
+            RelativePath = relativePath
+        };
     }
-
+    
     private static string RemoveExtraFromPath(string file)
     {
         return file.Substring(RepositoryPath.Length).Replace("\\", "/");
@@ -99,7 +87,7 @@ public static class ResourceHelper
         SHA512
     }
 
-    public static async Task Write(MemoryStream ms)
+    public static async Task<Resource> WriteResource(MemoryStream ms)
     {
         var byteArray = ms.ToArray();
         ms.Close();
@@ -107,11 +95,14 @@ public static class ResourceHelper
         
         var path = Encoding.UTF8.GetString(byteArray, 4, fileNameLen);
         var skipLength = 4 + fileNameLen;
-        
-        var file = new FileStream(RepositoryPath + path, FileMode.Create, FileAccess.Write);
+
+        var fullPath = RepositoryPath + path;
+        var file = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
         await file.WriteAsync(byteArray.AsMemory(skipLength, byteArray.Length - skipLength));
         file.Close();
         Log.Information("File {File} received", path);
+
+        return GetResourceByFullPath(fullPath);
     }
 
     public static List<Resource> GetResourcesWithRelativePath(string[] relativePaths)

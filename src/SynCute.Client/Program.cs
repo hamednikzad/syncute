@@ -22,7 +22,7 @@ public static class Program
 
 
         var cs = new CancellationTokenSource();
-        var client = new Client(cs.Token);
+        var client = new Connections.Client(cs.Token);
         
         Console.CancelKeyPress += async (sender, args) =>
         {
