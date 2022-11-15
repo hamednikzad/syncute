@@ -30,8 +30,10 @@ public static class Program
             var app = builder.Build();
             app.UseWebSockets();
 
+            // app.UseMiddleware<WebSocketSecurityMiddleware>();
+            
             var cs = new CancellationTokenSource();
-            var server = new global::Server(cs.Token);
+            var server = new Server(cs.Token);
             
             Console.CancelKeyPress += async (sender, args) =>
             {
@@ -55,6 +57,37 @@ public static class Program
         finally
         {
             await Log.CloseAndFlushAsync();
+        }
+    }
+}
+
+public class WebSocketSecurityMiddleware
+{
+    private readonly RequestDelegate _nextRequest;
+	
+    // stored access token usually retrieved from any storage
+    // implemented thought OAuth or any other identity protocol
+    private const string access_token = "821e2f35-86e3-4917-a963-b0c4228d1315";
+	
+    public WebSocketSecurityMiddleware(RequestDelegate next)
+    {
+        _nextRequest = next;
+    }
+	
+    public async Task Invoke(HttpContext context)
+    {
+        if (context.WebSockets.IsWebSocketRequest)
+        {
+            var accessToken = context.Request.Headers["access_token"];
+	
+            if (accessToken != access_token)
+                throw new UnauthorizedAccessException();
+                
+            await _nextRequest.Invoke(context);
+        }
+        else
+        {
+            await _nextRequest.Invoke(context);
         }
     }
 }

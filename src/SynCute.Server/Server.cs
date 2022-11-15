@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Serilog;
-using SynCute.Server;
+
+namespace SynCute.Server;
 
 public class Server
 {

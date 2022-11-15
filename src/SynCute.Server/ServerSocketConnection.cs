@@ -51,7 +51,7 @@ public class ServerSocketConnection
         //     Thread.Sleep(3000);
         // }
 
-        await t1;
+        // await t1;
     }
 
     private async Task WaitForReceive()

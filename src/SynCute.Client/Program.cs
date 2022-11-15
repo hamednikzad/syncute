@@ -23,12 +23,14 @@ public static class Program
 
         var cs = new CancellationTokenSource();
         var client = new Client(cs.Token);
+        
         Console.CancelKeyPress += async (sender, args) =>
         {
             Log.Information("Going to stop application");
             await client.Stop();
             cs.Cancel();
         };
+        
         try
         {
             Console.Title = "Client";

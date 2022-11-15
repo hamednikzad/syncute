@@ -17,6 +17,8 @@ public class Client : IDisposable
     {
         _cancellationToken = cancellationToken;
         _socket = new ClientWebSocket();
+        // _socket.Options.SetRequestHeader("access_token", "821e2f35-86e3-4917-a963-b0c4228d1315");
+        
         _messageProcessor = new ClientMessageProcessor(Send, Send);
     }
 
@@ -70,7 +72,7 @@ public class Client : IDisposable
             try
             {
                 Log.Information("Connecting...");
-                await _socket.ConnectAsync(new Uri("ws://localhost:5206/ws"), _cancellationToken);
+                await _socket.ConnectAsync(new Uri("ws://localhost:5000/ws"), _cancellationToken);
                 _isOpen = true;
                 Log.Information("Successfully connected");
                 return;
@@ -92,13 +94,14 @@ public class Client : IDisposable
 
         var t1 = Task.Run(async () =>
         {
-            while (_isOpen && _socket.State == WebSocketState.Open)
-            {
-                await WaitForReceive();
-            }
+
         }, _cancellationToken);
         
-        await SendGetAllResources();
+        await SendGetAllResources();            
+        while (_isOpen && _socket.State == WebSocketState.Open)
+        {
+            await WaitForReceive();
+        }
     }
 
     private async Task ProcessBinaryMessage(MemoryStream ms)
