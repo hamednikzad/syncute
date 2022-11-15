@@ -1,7 +1,9 @@
 using Serilog;
 using SynCute.Core.Helpers;
 
-public class Program
+namespace SynCute.Server;
+
+public static class Program
 {
     public static async Task Main()
     {
@@ -28,9 +30,16 @@ public class Program
             var app = builder.Build();
             app.UseWebSockets();
 
-            var server = new Server();
-
-            app.Map("/", context => context.Response.WriteAsync("Hello"));
+            var cs = new CancellationTokenSource();
+            var server = new global::Server(cs.Token);
+            
+            Console.CancelKeyPress += async (sender, args) =>
+            {
+                Log.Information("Going to stop application");
+                cs.Cancel();
+            };
+            
+            app.Map("/", context => context.Response.WriteAsync("Hello", cancellationToken: cs.Token));
             app.Map("/ws", server.Handle);
 
             Log.Information("Start listening on {Address}", address);

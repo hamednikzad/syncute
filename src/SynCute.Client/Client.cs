@@ -1,6 +1,7 @@
 ﻿using System.Net.WebSockets;
 using System.Text;
 using Serilog;
+using SynCute.Core.Helpers;
 using SynCute.Core.Messages;
 
 namespace SynCute.Client;
@@ -31,16 +32,15 @@ public class Client : IDisposable
             endOfMessage, _cancellationToken);
     }
 
-    private async Task WaitForReceive(CancellationToken ct)
+    private async Task WaitForReceive()
     {
         Log.Information("Waiting for new message...");
-
-        var buffer = new ArraySegment<byte>(new Byte[8192]);
 
         await using var ms = new MemoryStream();
         WebSocketReceiveResult result;
         do
         {
+            var buffer = new ArraySegment<byte>(new byte[8192]);
             result = await _socket.ReceiveAsync(buffer, _cancellationToken);
             ms.Write(buffer.Array!, buffer.Offset, result.Count);
         } while (!result.EndOfMessage);
@@ -53,6 +53,7 @@ public class Client : IDisposable
                 await ProcessTextMessage(ms);
                 break;
             case WebSocketMessageType.Binary:
+                await ProcessBinaryMessage(ms);
                 break;
             case WebSocketMessageType.Close:
                 _isOpen = false;
@@ -69,7 +70,7 @@ public class Client : IDisposable
             try
             {
                 Log.Information("Connecting...");
-                await _socket.ConnectAsync(new Uri("ws://localhost:5206/ws"), CancellationToken.None);
+                await _socket.ConnectAsync(new Uri("ws://localhost:5206/ws"), _cancellationToken);
                 _isOpen = true;
                 Log.Information("Successfully connected");
                 return;
@@ -89,14 +90,22 @@ public class Client : IDisposable
     {
         await Connect();
 
-        await SendGetAllResources();
-
-        while (!_cancellationToken.IsCancellationRequested)
+        var t1 = Task.Run(async () =>
         {
-            await WaitForReceive(_cancellationToken);
-        }
+            while (_isOpen && _socket.State == WebSocketState.Open)
+            {
+                await WaitForReceive();
+            }
+        }, _cancellationToken);
+        
+        await SendGetAllResources();
     }
 
+    private async Task ProcessBinaryMessage(MemoryStream ms)
+    {
+        await ResourceHelper.Write(ms);
+    }
+    
     private async Task Sync()
     {
         //Get current files

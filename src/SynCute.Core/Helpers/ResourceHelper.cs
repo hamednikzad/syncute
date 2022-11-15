@@ -89,6 +89,7 @@ public static class ResourceHelper
         var hash = hasher!.ComputeHash(stream);
         return BitConverter.ToString(hash).Replace("-", "");
     }
+    
     private enum HashingAlgoTypes
     {
         MD5,
@@ -111,5 +112,11 @@ public static class ResourceHelper
         await file.WriteAsync(byteArray.AsMemory(skipLength, byteArray.Length - skipLength));
         file.Close();
         Log.Information("File {File} received", path);
+    }
+
+    public static List<Resource> GetResourcesWithRelativePath(string[] relativePaths)
+    {
+        var resources = GetAllFilesWithChecksum();
+        return resources.Where(r => relativePaths.Contains(r.RelativePath)).ToList();
     }
 }

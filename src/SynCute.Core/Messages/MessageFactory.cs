@@ -8,7 +8,7 @@ namespace SynCute.Core.Messages;
 public static class MessageFactory
 {
     private const JsonHelper.CaseType CaseType = JsonHelper.CaseType.PascalCase;
-    
+
     private static GetAllResourcesMessage CreateGetAllResourcesMessage()
     {
         return new GetAllResourcesMessage();
@@ -44,5 +44,10 @@ public static class MessageFactory
     public static string CreateBadJsonMessage(string message)
     {
         return JsonHelper.Serialize(new BadMessage(message), CaseType);
+    }
+
+    public static string CreateDownloadResourcesJsonMessage(string[] resources)
+    {
+        return JsonHelper.Serialize(new DownloadResourcesMessage(new DownloadResourcesContent(resources)), CaseType);
     }
 }

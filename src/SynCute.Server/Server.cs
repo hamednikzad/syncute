@@ -4,11 +4,13 @@ using SynCute.Server;
 
 public class Server
 {
-    private readonly Dictionary<Guid, SocketConnection> _connections;
+    private readonly Dictionary<Guid, ServerSocketConnection> _connections;
+    private readonly CancellationToken _cancellationToken;
 
-    public Server()
+    public Server(CancellationToken cancellationToken)
     {
-        _connections = new Dictionary<Guid, SocketConnection>();
+        _cancellationToken = cancellationToken;
+        _connections = new Dictionary<Guid, ServerSocketConnection>();
     }
 
     public async Task Handle(HttpContext context)
@@ -19,7 +21,7 @@ public class Server
 
             Log.Information("Server accept connection on Thread {Thread}", Environment.CurrentManagedThreadId);
 
-            var connection = new SocketConnection(webSocket);
+            var connection = new ServerSocketConnection(webSocket, _cancellationToken);
 
             connection.ConnectionClosed += ConnectionOnConnectionClosed;
 

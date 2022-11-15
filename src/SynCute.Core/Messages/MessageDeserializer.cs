@@ -40,6 +40,16 @@ public static class MessageDeserializer
                     var listMessage = content.ToObject<AllResourcesListContent>();
                     if (listMessage != null) return new AllResourcesListMessage(listMessage);
                     break;
+                
+                case DownloadResourcesMessage.TypeName:
+                    var downloadContent = parsedObject["Content"];
+                    if (downloadContent == null)
+                        return new BadMessage("Content is missing");
+                    
+                    var downloadMessage = downloadContent.ToObject<DownloadResourcesContent>();
+                    if (downloadMessage != null) return new DownloadResourcesMessage(downloadMessage);
+                    break;
+                
                 default:
                     throw new Exception("Unknown message");
             }

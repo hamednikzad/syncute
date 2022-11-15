@@ -6,7 +6,7 @@ using SynCute.Core.Messages;
 
 namespace SynCute.Server;
 
-public class SocketConnection
+public class ServerSocketConnection
 {
     public event Action<Guid, string>? MessageReceived;
     public event Action<Guid>? ConnectionClosed;
@@ -14,14 +14,16 @@ public class SocketConnection
     public Guid Id { get; }
     private readonly WebSocket _socket;
     private readonly ServerMessageProcessor _messageProcessor;
+    private readonly CancellationToken _cancellationToken;
 
-    public SocketConnection(WebSocket socket)
+    public ServerSocketConnection(WebSocket socket, CancellationToken cancellationToken)
     {
         Id = Guid.NewGuid();
         _socket = socket;
+        _cancellationToken = cancellationToken;
 
         Log.Information("Connection with Id {Id} established", Id);
-        _messageProcessor = new ServerMessageProcessor(Send);
+        _messageProcessor = new ServerMessageProcessor(Send, Send);
         _messageProcessor.ConnectionClosed += id => ConnectionClosed?.Invoke(id);
         _messageProcessor.UnknownMessageReceived += async () => await Send("UnknownMessage");
     }
@@ -31,15 +33,15 @@ public class SocketConnection
     public async Task Start()
     {
         _isOpen = true;
-        while (_isOpen && _socket.State == WebSocketState.Open)
-        {
-            Log.Information("Listening for {Id}, Thread {Thread}", Id, Environment.CurrentManagedThreadId);
-            await WaitForReceive();
-        }
+
         var t1 = Task.Run(async () =>
         {
-            
-        });
+            while (_isOpen && _socket.State == WebSocketState.Open)
+            {
+                Log.Information("Listening for {Id}, Thread {Thread}", Id, Environment.CurrentManagedThreadId);
+                await WaitForReceive();
+            }
+        }, _cancellationToken);
         
         // while (_isOpen && _socket.State == WebSocketState.Open)
         // {
@@ -61,7 +63,7 @@ public class SocketConnection
         do
         {
             var buffer = new ArraySegment<byte>(new byte[8192]);
-            result = await _socket.ReceiveAsync(buffer, CancellationToken.None);
+            result = await _socket.ReceiveAsync(buffer, _cancellationToken);
             receivedSize += result.Count;
             count++;
             ms.Write(buffer.Array!, buffer.Offset, result.Count);
@@ -114,11 +116,18 @@ public class SocketConnection
     public async Task Send(string message)
     {
         await _socket.SendAsync(Encoding.ASCII.GetBytes(message), WebSocketMessageType.Text,
-            true, CancellationToken.None);
+            true, _cancellationToken);
+    }
+
+    private async Task Send(ReadOnlyMemory<byte> message, bool endOfMessage)
+    {
+        await _socket.SendAsync(message, WebSocketMessageType.Binary,
+            endOfMessage, _cancellationToken);
     }
 
     private async Task Send(byte[] message)
     {
-        await _socket.SendAsync(message, WebSocketMessageType.Binary, true, CancellationToken.None);
+        await _socket.SendAsync(message, WebSocketMessageType.Binary, true, _cancellationToken
+        );
     }
 }
