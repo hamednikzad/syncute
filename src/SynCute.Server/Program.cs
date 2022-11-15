@@ -1,11 +1,5 @@
-// var builder = WebApplication.CreateBuilder(args);
-// var app = builder.Build();
-//
-// app.MapGet("/", () => "Hello World!");
-//
-// app.Run();
-
 using Serilog;
+using SynCute.Core.Helpers;
 
 public class Program
 {
@@ -40,6 +34,8 @@ public class Program
             app.Map("/ws", server.Handle);
 
             Log.Information("Start listening on {Address}", address);
+            
+            ResourceHelper.CheckRepository();
             
             await app.RunAsync();
         }

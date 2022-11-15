@@ -1,6 +1,7 @@
 ﻿using System.Net.WebSockets;
 using System.Text;
 using Serilog;
+using SynCute.Core.Helpers;
 using SynCute.Core.Messages;
 
 namespace SynCute.Server;
@@ -12,7 +13,7 @@ public class SocketConnection
 
     public Guid Id { get; }
     private readonly WebSocket _socket;
-    private readonly MessageProcessor _messageProcessor;
+    private readonly ServerMessageProcessor _messageProcessor;
 
     public SocketConnection(WebSocket socket)
     {
@@ -20,7 +21,7 @@ public class SocketConnection
         _socket = socket;
 
         Log.Information("Connection with Id {Id} established", Id);
-        _messageProcessor = new MessageProcessor(Send);
+        _messageProcessor = new ServerMessageProcessor(Send);
         _messageProcessor.ConnectionClosed += id => ConnectionClosed?.Invoke(id);
         _messageProcessor.UnknownMessageReceived += async () => await Send("UnknownMessage");
     }
@@ -30,24 +31,39 @@ public class SocketConnection
     public async Task Start()
     {
         _isOpen = true;
-        await Send("Hello from server!");
-        while (_isOpen)
+        while (_isOpen && _socket.State == WebSocketState.Open)
         {
-            //await Task.Delay(1000);
             Log.Information("Listening for {Id}, Thread {Thread}", Id, Environment.CurrentManagedThreadId);
             await WaitForReceive();
         }
+        var t1 = Task.Run(async () =>
+        {
+            
+        });
+        
+        // while (_isOpen && _socket.State == WebSocketState.Open)
+        // {
+        //     //await Task.Delay(1000);
+        //     Log.Information("Listening for {Id}, Thread {Thread}", Id, Environment.CurrentManagedThreadId);
+        //     await Send(MessageFactory.CreatePingJsonMessage());
+        //     Thread.Sleep(3000);
+        // }
+
+        await t1;
     }
 
     private async Task WaitForReceive()
     {
-        var buffer = new ArraySegment<byte>(new Byte[8192]);
-
+        var receivedSize = 0;
+        var count = 0;
         await using var ms = new MemoryStream();
         WebSocketReceiveResult result;
         do
         {
+            var buffer = new ArraySegment<byte>(new byte[8192]);
             result = await _socket.ReceiveAsync(buffer, CancellationToken.None);
+            receivedSize += result.Count;
+            count++;
             ms.Write(buffer.Array!, buffer.Offset, result.Count);
         } while (!result.EndOfMessage);
 
@@ -59,6 +75,7 @@ public class SocketConnection
                 await ProcessTextMessage(ms);
                 break;
             case WebSocketMessageType.Binary:
+                await ProcessBinaryMessage(ms);
                 break;
             case WebSocketMessageType.Close:
                 ProcessCloseMessage();
@@ -76,6 +93,11 @@ public class SocketConnection
         ConnectionClosed?.Invoke(Id);
     }
 
+    private async Task ProcessBinaryMessage(MemoryStream ms)
+    {
+        await ResourceHelper.Write(ms);
+    }
+
     private async Task ProcessTextMessage(Stream ms)
     {
         using var reader = new StreamReader(ms, Encoding.UTF8);
@@ -84,12 +106,9 @@ public class SocketConnection
 
         var message = MessageDeserializer.Deserialize(text);
 
-        if (message is null)
-            return;
-
         await _messageProcessor.Process(message);
 
-        MessageReceived?.Invoke(Id, text);
+        // MessageReceived?.Invoke(Id, text);
     }
 
     public async Task Send(string message)
@@ -101,37 +120,5 @@ public class SocketConnection
     private async Task Send(byte[] message)
     {
         await _socket.SendAsync(message, WebSocketMessageType.Binary, true, CancellationToken.None);
-    }
-}
-
-public class MessageProcessor
-{
-    private readonly Func<string, Task> _send;
-    public event Action<Guid>? ConnectionClosed;
-    public event Action? UnknownMessageReceived;
-
-    public MessageProcessor(Func<string, Task> send)
-    {
-        _send = send;
-    }
-
-    public async Task Process(Message message)
-    {
-        switch (message)
-        {
-            case UnknownMessage:
-                UnknownMessageReceived?.Invoke();
-                break;
-            case AuthenticationMessage authMsg:
-                break;
-            case GetAllResourcesMessage:
-                OnGetAllResourcesMessageReceived();
-                break;
-        }
-    }
-
-    private void OnGetAllResourcesMessageReceived()
-    {
-        
     }
 }

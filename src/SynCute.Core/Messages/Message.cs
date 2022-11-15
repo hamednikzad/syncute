@@ -1,23 +1,11 @@
 namespace SynCute.Core.Messages;
 
-public class Message
+public abstract class Message
 {
-    public string Command { get; init; }
-    public List<string> Meta { get; init; }
-    public string Content { get; init; }
-
-    public Message()
-    {
-    }
+    public string Type { get; }
     
-    protected Message(string command)
+    protected Message(string type)
     {
-        Command = command;
-    }
-    
-    
-    public string GetJson()
-    {
-        throw new NotImplementedException();
+        Type = type;
     }
 }
