@@ -5,6 +5,7 @@
   },
   "profiles": {
     "SynCute.Server": {
+      "commandLineArgs": "--helpppp",
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": false,

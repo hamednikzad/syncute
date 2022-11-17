@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace SynCute.Core.Models;
 
@@ -11,10 +12,10 @@ public class Resource
     [Newtonsoft.Json.JsonIgnore]
     public string FullPath { get; init; } = null!;
 
-    [JsonPropertyName("Path")]
+    [JsonProperty("Path")]
     public string RelativePath { get; init; } = null!;
 
 
-    [JsonPropertyName("Checksum")]
+    [JsonProperty("Checksum")]
     public string? Checksum { get; init; }
 }

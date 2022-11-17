@@ -9,16 +9,18 @@ namespace SynCute.Client.Connections;
 
 public class Client : IDisposable
 {
+    private readonly string _remoteAddress;
+    private readonly string _accessToken;
     private readonly CancellationToken _cancellationToken;
-    private readonly ClientWebSocket _socket;
     private readonly ClientMessageProcessor _messageProcessor;
+    private ClientWebSocket _socket = null!;
     private bool _isOpen;
 
-    public Client(CancellationToken cancellationToken)
+    public Client(string remoteAddress, string accessToken, CancellationToken cancellationToken)
     {
+        _remoteAddress = remoteAddress;
+        _accessToken = accessToken;
         _cancellationToken = cancellationToken;
-        _socket = new ClientWebSocket();
-        // _socket.Options.SetRequestHeader("access_token", "821e2f35-86e3-4917-a963-b0c4228d1315");
         
         _messageProcessor = new ClientMessageProcessor(Send, Send);
     }
@@ -66,21 +68,39 @@ public class Client : IDisposable
         }
     }
 
+    private ClientWebSocket CreateSocket()
+    {
+        _socket = new ClientWebSocket();
+        _socket.Options.SetRequestHeader("access_token", _accessToken);
+        return _socket;
+    }
+    
     private async Task Connect()
     {
         while (true)
         {
             try
             {
-                Log.Information("Connecting...");
-                await _socket.ConnectAsync(new Uri("ws://localhost:5206/ws"), _cancellationToken);
+                Log.Information("Connecting to {Address}...", _remoteAddress);
+                
+                _socket = CreateSocket();
+                await _socket.ConnectAsync(new Uri(_remoteAddress), _cancellationToken);
                 _isOpen = true;
                 Log.Information("Successfully connected");
                 return;
             }
+            catch (WebSocketException e)
+            {
+                Log.Error(e, "Error in connection to server");
+                if (e.WebSocketErrorCode == WebSocketError.NotAWebSocket)
+                {
+                    return;
+                }
+            }
             catch (Exception e)
             {
                 Log.Error(e, "Error in connection to server");
+                throw;
             }
 
             const int sleep = 5000;

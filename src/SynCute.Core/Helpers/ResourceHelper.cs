@@ -16,6 +16,7 @@ public static class ResourceHelper
                 Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? string.Empty,
                 "Repository");
     }
+    
     public static void CheckRepository()
     {
         if (!Directory.Exists(RepositoryPath))

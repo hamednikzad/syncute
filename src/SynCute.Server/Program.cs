@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Net;
 using Serilog;
 using SynCute.Core.Helpers;
 
@@ -5,49 +7,16 @@ namespace SynCute.Server;
 
 public static class Program
 {
-    public static async Task Main()
+    public static async Task Main(string[] args)
     {
-        var configuration = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json")
-            .AddJsonFile(
-                $"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json",
-                true)
-            //.AddJsonFile($"appsettings.{GetOs()}.json", optional: true, reloadOnChange: true)
-            .Build();
+        //if (CheckCommandLine(args)) return;
 
-        Log.Logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(configuration)
-            .CreateLogger();
+        var configuration = ConfigApplication();
 
         try
         {
-            const string address = "http://localhost:6666";
-            
-            Console.Title = "Server";
-            var builder = WebApplication.CreateBuilder();
-            builder.WebHost.UseUrls();
-            var app = builder.Build();
-            app.UseWebSockets();
+            if (ConfigServer(configuration, out var app)) return;
 
-            // app.UseMiddleware<WebSocketSecurityMiddleware>();
-            
-            var cs = new CancellationTokenSource();
-            var server = new Server(cs.Token);
-            
-            Console.CancelKeyPress += async (sender, args) =>
-            {
-                Log.Information("Going to stop application");
-                cs.Cancel();
-            };
-            
-            app.Map("/", context => context.Response.WriteAsync("Hello", cancellationToken: cs.Token));
-            app.Map("/ws", server.Handle);
-
-            Log.Information("Start listening on {Address}", address);
-            
-            ResourceHelper.CheckRepository();
-            
             await app.RunAsync();
         }
         catch (Exception ex)
@@ -59,35 +28,152 @@ public static class Program
             await Log.CloseAndFlushAsync();
         }
     }
-}
 
-public class WebSocketSecurityMiddleware
-{
-    private readonly RequestDelegate _nextRequest;
-	
-    // stored access token usually retrieved from any storage
-    // implemented thought OAuth or any other identity protocol
-    private const string access_token = "821e2f35-86e3-4917-a963-b0c4228d1315";
-	
-    public WebSocketSecurityMiddleware(RequestDelegate next)
+    private static bool ConfigServer(IConfigurationRoot configuration, out WebApplication app)
     {
-        _nextRequest = next;
-    }
-	
-    public async Task Invoke(HttpContext context)
-    {
-        if (context.WebSockets.IsWebSocketRequest)
+        var builder = WebApplication.CreateBuilder();
+        if (!int.TryParse(configuration["HostPort"], NumberStyles.Any, new NumberFormatInfo(), out var hostPort))
         {
-            var accessToken = context.Request.Headers["access_token"];
-	
-            if (accessToken != access_token)
-                throw new UnauthorizedAccessException();
-                
-            await _nextRequest.Invoke(context);
+            throw new Exception("Host port is missing");
+        }
+        
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            options.Listen(IPAddress.Any, hostPort);
+        });
+
+        app = builder.Build();
+        app.UseWebSockets();
+
+        var accessToken = configuration["AccessToken"];
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            throw new Exception("Access token is missing");
+        }
+
+        var cs = new CancellationTokenSource();
+        var server = new Server(accessToken, cs.Token);
+
+        Console.CancelKeyPress += async (sender, args) =>
+        {
+            Log.Information("Going to stop application");
+            cs.Cancel();
+        };
+
+        app.Map("/", context => context.Response.WriteAsync("SynCute server is Up and Running!", cancellationToken: cs.Token));
+        app.Map("/ws", server.Handle);
+
+
+        ResourceHelper.CheckRepository();
+        return false;
+    }
+
+    private static IConfigurationRoot ConfigApplication()
+    {
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json")
+            .AddJsonFile(
+                $"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json",
+                true)
+            .Build();
+
+        Log.Logger = new LoggerConfiguration()
+            .ReadFrom.Configuration(configuration)
+            .CreateLogger();
+        
+        Console.Title = "SynCute Server";
+        
+        return configuration;
+    }
+
+    private static bool CheckCommandLine(string[] args)
+    {
+        var verbose = 0;
+        var names = new List<string>();
+        bool show_help = false;
+        int repeat = 1;
+
+        var p = new OptionSet()
+        {
+            {
+                "n|name=", "the {NAME} of someone to greet.",
+                v => names.Add(v)
+            },
+            {
+                "r|repeat=",
+                "the number of {TIMES} to repeat the greeting.\n" +
+                "this must be an integer.",
+                (int v) => repeat = v
+            },
+            {
+                "v", "increase debug message verbosity",
+                v =>
+                {
+                    if (v != null) ++verbosity;
+                }
+            },
+            {
+                "h|help", "show this message and exit",
+                v => show_help = v != null
+            },
+        };
+
+        List<string> extra;
+        try
+        {
+            extra = p.Parse(args);
+        }
+        catch (OptionException e)
+        {
+            Console.Write("greet: ");
+            Console.WriteLine(e.Message);
+            Console.WriteLine("Try `greet --help' for more information.");
+            return true;
+        }
+
+        if (show_help)
+        {
+            ShowHelp(p);
+            return true;
+        }
+
+        string message;
+        if (extra.Count > 0)
+        {
+            message = string.Join(" ", extra.ToArray());
+            Debug("Using new message: {0}", message);
         }
         else
         {
-            await _nextRequest.Invoke(context);
+            message = "Hello {0}!";
+            Debug("Using default message: {0}", message);
+        }
+
+        foreach (var name in names)
+        {
+            for (int i = 0; i < repeat; ++i)
+                Console.WriteLine(message, name);
+        }
+
+        return false;
+    }
+
+    static void ShowHelp (OptionSet p)
+    {
+        Console.WriteLine ("Usage: greet [OPTIONS]+ message");
+        Console.WriteLine ("Greet a list of individuals with an optional message.");
+        Console.WriteLine ("If no message is specified, a generic greeting is used.");
+        Console.WriteLine ();
+        Console.WriteLine ("Options:");
+        p.WriteOptionDescriptions (Console.Out);
+    }
+    static int verbosity;
+    static void Debug (string format, params object[] args)
+    {
+        if (verbosity > 0) {
+            Console.Write ("# ");
+            Console.WriteLine (format, args);
         }
     }
 }

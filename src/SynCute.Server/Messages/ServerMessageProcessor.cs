@@ -53,8 +53,6 @@ public class ServerMessageProcessor : MessageProcessor
     private async Task OnPingMessage()
     {
         Log.Information("receive ping message");
-        await _send(MessageFactory.CreatePongJsonMessage());
-        Thread.Sleep(1000);
 
         await _send(MessageFactory.CreatePongJsonMessage());
     }

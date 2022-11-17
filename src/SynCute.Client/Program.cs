@@ -7,6 +7,36 @@ public static class Program
 {
     public static async Task Main()
     {
+        var configuration = ConfigApplication();
+
+        if (ConfigClient(configuration, out var cs, out var client)) return;
+
+        Console.CancelKeyPress += async (sender, args) =>
+        {
+            Log.Information("Going to stop application");
+            await client?.Stop()!;
+            cs.Cancel();
+        };
+        
+        try
+        {
+            ResourceHelper.CheckRepository();
+
+            await client?.Start()!;
+        }
+        catch (Exception ex)
+        {
+            await client?.Stop()!;
+            Log.Fatal(ex, "Host terminated unexpectedly");
+        }
+        finally
+        {
+            await Log.CloseAndFlushAsync();
+        }
+    }
+
+    private static IConfigurationRoot ConfigApplication()
+    {
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json")
@@ -19,34 +49,28 @@ public static class Program
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
             .CreateLogger();
-
-
-        var cs = new CancellationTokenSource();
-        var client = new Connections.Client(cs.Token);
         
-        Console.CancelKeyPress += async (sender, args) =>
-        {
-            Log.Information("Going to stop application");
-            await client.Stop();
-            cs.Cancel();
-        };
+        Console.Title = "SynCute Client";
         
-        try
-        {
-            Console.Title = "Client";
+        return configuration;
+    }
 
-            ResourceHelper.CheckRepository();
+    private static bool ConfigClient(IConfigurationRoot configuration, out CancellationTokenSource cs, out Connections.Client? client)
+    {
+        var accessToken = configuration["AccessToken"];
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            throw new Exception("Access token is missing");
+        }
 
-            await client.Start();
-        }
-        catch (Exception ex)
+        var remoteAddress = configuration["RemoteAddress"];
+        if (string.IsNullOrEmpty(remoteAddress))
         {
-            await client.Stop();
-            Log.Fatal(ex, "Host terminated unexpectedly");
+            throw new Exception("RemoteAddress is missing");
         }
-        finally
-        {
-            await Log.CloseAndFlushAsync();
-        }
+
+        cs = new CancellationTokenSource();
+        client = new Connections.Client(remoteAddress, accessToken, cs.Token);
+        return false;
     }
 }
