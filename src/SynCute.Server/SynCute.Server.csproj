@@ -13,7 +13,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\SynCute.Core\SynCute.Core.csproj" />
+      <ProjectReference Include="..\SynCute.Common\SynCute.Common.csproj" />
+      <ProjectReference Include="..\SynCute.Server.Core\SynCute.Server.Core.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Net;
 using Serilog;
-using SynCute.Core.Helpers;
+using SynCute.Common.Helpers;
 
 namespace SynCute.Server;
 
@@ -29,7 +29,8 @@ public static class Program
 
     private static bool ConfigServer(IConfigurationRoot configuration, out WebApplication app)
     {
-        ResourceHelper.CheckRepository(configuration["RepositoryPath"]);
+        IResourceHelper resourceHelper = new ResourceHelper(configuration["RepositoryPath"]);
+        resourceHelper.CheckRepository();
         
         var builder = WebApplication.CreateBuilder();
         if (!int.TryParse(configuration["HostPort"], NumberStyles.Any, new NumberFormatInfo(), out var hostPort))
@@ -55,9 +56,9 @@ public static class Program
         }
 
         var cs = new CancellationTokenSource();
-        var server = new Server(accessToken, cs.Token);
+        var server = new Core.Server(resourceHelper, accessToken, cs.Token);
 
-        Console.CancelKeyPress += async (sender, args) =>
+        Console.CancelKeyPress += (_, _) =>
         {
             Log.Information("Going to stop application");
             cs.Cancel();

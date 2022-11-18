@@ -1,5 +1,5 @@
 ﻿using Serilog;
-using SynCute.Core.Helpers;
+using SynCute.Common.Helpers;
 
 namespace SynCute.Client;
 
@@ -9,18 +9,19 @@ public static class Program
     {
         var configuration = ConfigApplication();
 
-        if (ConfigClient(configuration, out var cs, out var client)) return;
+        IResourceHelper resourceHelper = new ResourceHelper(configuration["RepositoryPath"]);
+        if (ConfigClient(resourceHelper, configuration, out var cs, out var client)) return;
 
-        Console.CancelKeyPress += async (sender, args) =>
+        Console.CancelKeyPress += async (_, _) =>
         {
             Log.Information("Going to stop application");
             await client?.Stop()!;
             cs.Cancel();
         };
-        
+
         try
         {
-            ResourceHelper.CheckRepository(configuration["RepositoryPath"]);
+            resourceHelper.CheckRepository();
 
             await client?.Start()!;
         }
@@ -49,13 +50,14 @@ public static class Program
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
             .CreateLogger();
-        
+
         Console.Title = "SynCute Client";
-        
+
         return configuration;
     }
 
-    private static bool ConfigClient(IConfigurationRoot configuration, out CancellationTokenSource cs, out Connections.Client? client)
+    private static bool ConfigClient(IResourceHelper resourceHelper, IConfigurationRoot configuration,
+        out CancellationTokenSource cs, out Core.Connections.Client? client)
     {
         var accessToken = configuration["AccessToken"];
         if (string.IsNullOrEmpty(accessToken))
@@ -70,7 +72,7 @@ public static class Program
         }
 
         cs = new CancellationTokenSource();
-        client = new Connections.Client(remoteAddress, accessToken, cs.Token);
+        client = new Core.Connections.Client(resourceHelper, remoteAddress, accessToken, cs.Token);
         return false;
     }
 }

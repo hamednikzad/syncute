@@ -1,0 +1,7 @@
+9:04:37 PM: Number of online connections: 0
+
+9:04:37 PM: A connection closed
+
+9:04:33 PM: Number of online connections: 1
+
+9:04:28 PM: Number of online connections: 0

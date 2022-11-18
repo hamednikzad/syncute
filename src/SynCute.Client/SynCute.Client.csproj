@@ -8,7 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\SynCute.Core\SynCute.Core.csproj" />
+      <ProjectReference Include="..\SynCute.Client.Core\SynCute.Client.Core.csproj" />
+      <ProjectReference Include="..\SynCute.Common\SynCute.Common.csproj" />
     </ItemGroup>
 
     <ItemGroup>
