@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    <title>SynCute Web Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <style>
+        body{
+            background-color: #242424;
+        }
+        #log-console{
+            min-height: 40em;
+            background-color: black;
+            color: greenyellow;
+        }
+    </style>
+</head>
+<body>
+<div>
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <div class="form-group">
+                    <label for="log-console">Messages:</label>
+                    <div id="log-console" class="form-control"></div>
+                </div>   
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Optional JavaScript -->
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+        integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
+        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+<script>
+    function connect() {
+        const address = "ws://" + location.host + "/status";
+        console.log(address)
+        const ws = new WebSocket(address);
+        ws.onopen = function() {
+            console.log("Connection successfully established")
+            ws.send(JSON.stringify({
+                message: "Hello from client"
+            }));
+        };
+
+        ws.onmessage = function(e) {
+            console.log('Message from server ', e.data);
+            logConsole(e.data)
+        };
+
+        // ws.onclose = function(e) {
+        //     console.log('Socket is closed. Reconnect will be attempted in 5 second.', e);
+        //     setTimeout(function() {
+        //         connect();
+        //     }, 5000);
+        // };
+        //
+        // ws.onerror = function(err) {
+        //     console.error('Socket encountered error: ', err.message, 'Closing socket');
+        //     ws.close();
+        // };
+    }
+    connect();
+    function getLineCount(str){
+        return str.split(/\r\n|\r|\n/).length;
+    }
+    function getTime(){
+        const d = new Date();
+        return d.toLocaleTimeString();
+    }
+    function logConsole(text){
+        const con = $('#log-console');
+        const l = con.children().length;
+        console.log("Lines:" + l);
+        if(l > 3){
+            con.children().last().remove()
+        }
+        con.prepend("<p>" + getTime() + ":\t" + text + "</p>");
+        
+        // $('#log-console').val(function(i, t) {
+        //     console.log(i, t, text)
+        //    
+        //     return t + "\n" + text;
+        // });
+    }
+</script>
+</body>
+</html>

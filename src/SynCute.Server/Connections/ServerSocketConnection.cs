@@ -34,10 +34,18 @@ public class ServerSocketConnection
 
         var listeningTask = Task.Run(async () =>
         {
-            while (_isOpen && _socket.State == WebSocketState.Open)
+            try
             {
-                Log.Information("Listening for {Id}, Thread {Thread}", Id, Environment.CurrentManagedThreadId);
-                await WaitForReceive();
+                while (_isOpen && _socket.State == WebSocketState.Open)
+                {
+                    Log.Information("Listening for {Id}, Thread {Thread}", Id, Environment.CurrentManagedThreadId);
+                    await WaitForReceive();
+                }
+            }
+            catch (Exception e)
+            {
+                // Log.Error(e, "Exception occured while WaitForReceive");
+                ProcessCloseMessage();
             }
         }, _cancellationToken);
         
@@ -78,7 +86,7 @@ public class ServerSocketConnection
 
     private async Task Send(string message)
     {
-        await _socket.SendAsync(Encoding.UTF8.GetBytes(message), WebSocketMessageType.Text,
+        await _socket.SendAsync(ArrayHelper.GetByteArray(message), WebSocketMessageType.Text,
             true, _cancellationToken);
     }
 

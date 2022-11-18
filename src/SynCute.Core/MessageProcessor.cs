@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using System.Text;
 using Serilog;
+using SynCute.Core.Helpers;
 using SynCute.Core.Messages;
 using SynCute.Core.Models;
 
@@ -17,7 +18,7 @@ public abstract class MessageProcessor
         _sendByteArray = sendByteArray;
     }
 
-    protected async Task UploadResources(List<Resource> resources)
+    public async Task UploadResources(List<Resource> resources)
     {
         if (!resources.Any())
         {
@@ -43,11 +44,14 @@ public abstract class MessageProcessor
             .CreateDownloadResourcesJsonMessage(resources.Select(r => r.RelativePath).ToArray()));
     }
 
+    
+    
     private async Task SendFile(Resource resource)
     {
-        var fileNameByte = Encoding.UTF8.GetBytes(resource.RelativePath);
+        var fileNameByte = ArrayHelper.GetByteArray(resource.RelativePath);
         var clientData = new byte[4 + fileNameByte.Length];
-        var fileNameLen = BitConverter.GetBytes(fileNameByte.Length);
+        var fileNameLen = ArrayHelper.GetByteArray(fileNameByte.Length);
+        
         fileNameLen.CopyTo(clientData, 0);
         fileNameByte.CopyTo(clientData, 4);
         await _sendByteArray(clientData, false);

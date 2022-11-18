@@ -9,8 +9,6 @@ public static class Program
 {
     public static async Task Main(string[] args)
     {
-        //if (CheckCommandLine(args)) return;
-
         var configuration = ConfigApplication();
 
         try
@@ -31,6 +29,8 @@ public static class Program
 
     private static bool ConfigServer(IConfigurationRoot configuration, out WebApplication app)
     {
+        ResourceHelper.CheckRepository(configuration["RepositoryPath"]);
+        
         var builder = WebApplication.CreateBuilder();
         if (!int.TryParse(configuration["HostPort"], NumberStyles.Any, new NumberFormatInfo(), out var hostPort))
         {
@@ -41,7 +41,10 @@ public static class Program
         {
             options.Listen(IPAddress.Any, hostPort);
         });
-
+        
+        builder.Services.AddRazorPages();
+        builder.Services.AddControllersWithViews();
+        
         app = builder.Build();
         app.UseWebSockets();
 
@@ -60,11 +63,21 @@ public static class Program
             cs.Cancel();
         };
 
-        app.Map("/", context => context.Response.WriteAsync("SynCute server is Up and Running!", cancellationToken: cs.Token));
         app.Map("/ws", server.Handle);
+        app.Map("/status", server.HandleStatus);
+        
+        var options = new DefaultFilesOptions();
+        options.DefaultFileNames.Clear();
+        options.DefaultFileNames.Add("index.html");
+        
+        app.UseDefaultFiles(options);
+        app.UseStaticFiles();
 
+        app.UseAuthorization();
 
-        ResourceHelper.CheckRepository();
+        app.MapDefaultControllerRoute();
+        app.MapRazorPages();
+
         return false;
     }
 
@@ -168,6 +181,7 @@ public static class Program
         Console.WriteLine ("Options:");
         p.WriteOptionDescriptions (Console.Out);
     }
+   
     static int verbosity;
     static void Debug (string format, params object[] args)
     {

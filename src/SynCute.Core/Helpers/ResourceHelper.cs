@@ -7,18 +7,22 @@ namespace SynCute.Core.Helpers;
 
 public static class ResourceHelper
 {
-    private static readonly string RepositoryPath;
-
-    static ResourceHelper()
-    {
-        RepositoryPath =
-            Path.Combine(
-                Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? string.Empty,
-                "Repository");
-    }
+    public static string RepositoryPath = "";
     
-    public static void CheckRepository()
+    public static void CheckRepository(string path)
     {
+        if (string.IsNullOrEmpty(path))
+        {
+            RepositoryPath =
+                Path.Combine(
+                    Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? string.Empty,
+                    "Repository");
+        }
+        else
+        {
+            RepositoryPath = path;
+        }
+        
         if (!Directory.Exists(RepositoryPath))
         {
             Directory.CreateDirectory(RepositoryPath);
@@ -70,7 +74,7 @@ public static class ResourceHelper
     {
         return file.Substring(RepositoryPath.Length).Replace("\\", "/");
     }
-    
+
     private static string GetChecksum(HashingAlgoTypes hashingAlgoType, string filename)
     {
         using var hasher = System.Security.Cryptography.HashAlgorithm.Create(hashingAlgoType.ToString());
@@ -78,7 +82,7 @@ public static class ResourceHelper
         var hash = hasher!.ComputeHash(stream);
         return BitConverter.ToString(hash).Replace("-", "");
     }
-    
+
     private enum HashingAlgoTypes
     {
         MD5,

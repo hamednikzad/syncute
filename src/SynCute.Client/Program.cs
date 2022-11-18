@@ -20,7 +20,7 @@ public static class Program
         
         try
         {
-            ResourceHelper.CheckRepository();
+            ResourceHelper.CheckRepository(configuration["RepositoryPath"]);
 
             await client?.Start()!;
         }

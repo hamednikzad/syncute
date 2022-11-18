@@ -4,6 +4,7 @@ using Serilog;
 using SynCute.Client.Messages;
 using SynCute.Core.Helpers;
 using SynCute.Core.Messages;
+using SynCute.Core.Models;
 
 namespace SynCute.Client.Connections;
 
@@ -25,9 +26,61 @@ public class Client : IDisposable
         _messageProcessor = new ClientMessageProcessor(Send, Send);
     }
 
+    #region Repository Related
+
+    private List<Resource> _lastResources = null!;
+    
+    private void ConfigRepositoryWatcher()
+    {
+        _lastResources = ResourceHelper.GetAllFilesWithChecksum();
+        
+        var fileSystemWatcher = new FileSystemWatcher(ResourceHelper.RepositoryPath);
+        fileSystemWatcher.IncludeSubdirectories = true;
+        fileSystemWatcher.Created += async (_, _) => { await RepositoryModified();};
+        fileSystemWatcher.Renamed += async (_, _) => { await RepositoryModified();};
+        fileSystemWatcher.Deleted += async (_, _) => { await RepositoryModified();};
+        fileSystemWatcher.Changed += async (_, _) => { await RepositoryModified();};
+        fileSystemWatcher.EnableRaisingEvents = true;
+    }
+
+    private async Task RepositoryModified()
+    {
+        Log.Information("Repository changed");
+        Log.Information("Last resources count: {Count}", _lastResources.Count);
+        var currentResources = ResourceHelper.GetAllFilesWithChecksum();
+        Log.Information("New resources count: {Count}", _lastResources.Count);
+
+        var newResources = CompareResources(currentResources);
+        if (newResources.Any())
+        {
+            await _messageProcessor.UploadResources(newResources);
+            _lastResources = currentResources;    
+        }
+    }
+
+    private List<Resource> CompareResources(List<Resource> currentResources)
+    {
+        var result = new List<Resource>();
+
+        foreach (var currentResource in currentResources)
+        {
+            var found = _lastResources.Any(r => r.Checksum == currentResource.Checksum &&
+                                                          r.RelativePath == currentResource.RelativePath);
+            if (found)
+            {
+                continue;
+            }
+            result.Add(currentResource);
+        }
+
+        return result;
+    }
+
+    #endregion
+    
     private async Task Send(string message)
     {
-        await _socket.SendAsync(Encoding.UTF8.GetBytes(message), WebSocketMessageType.Text,
+        await _socket.SendAsync(ArrayHelper.GetByteArray(message), WebSocketMessageType.Text,
             true, _cancellationToken);
     }
 
@@ -111,12 +164,9 @@ public class Client : IDisposable
 
     public async Task Start()
     {
+        ConfigRepositoryWatcher();
+        
         await Connect();
-
-        // var t1 = Task.Run(async () =>
-        // {
-        //
-        // }, _cancellationToken);
                   
         while (_isOpen && _socket.State == WebSocketState.Open)
         {
