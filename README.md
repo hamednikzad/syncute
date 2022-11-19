@@ -1,9 +1,14 @@
-# syncute
+# SynCute
 SynCute is a .NET file synchronizer consisting of server and client programs. SynCute targets .NET 6.
 
 ## Server
 SynCute server is an Asp.NET core application that serves WebSocket connections. Clients that are connected to the server sync their local directory with the server, and the server notifies other clients when a new resource is uploaded to the server.
 Run server with --help for more information.
+
+On the root of server address there is a web page that shows status of the server, realtime, which is implemented with WebSocket.
+
+http://localhost:5000
+
 
 ## Docker
 You can build docker file with this command:
