@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
 using Serilog;
@@ -13,9 +14,9 @@ public static class Program
 
         try
         {
-            if (ConfigServer(configuration, out var app)) return;
+            if (!ConfigServer(configuration, out var app, args)) return;
 
-            await app.RunAsync();
+            await app?.RunAsync()!;
         }
         catch (Exception ex)
         {
@@ -27,17 +28,25 @@ public static class Program
         }
     }
 
-    private static bool ConfigServer(IConfigurationRoot configuration, out WebApplication app)
+    private static bool ConfigServer(IConfiguration configuration, out WebApplication? app, string[] args)
     {
-        IResourceHelper resourceHelper = new ResourceHelper(configuration["RepositoryPath"]);
+        var (isSuccess, repoPath, token, port) = CheckCommandLine(args);
+        if (!isSuccess)
+        {
+            app = null;
+            return false;
+        }
+
+        ExtractOptions(configuration, port, token, ref repoPath, out var accessToken, out var hostPort);
+
+        Log.Information("Configs:");
+        Log.Information("Repo Path: {Path}", repoPath);
+        Log.Information("Host Port: {Port}", hostPort);
+        
+        IResourceHelper resourceHelper = new ResourceHelper(repoPath);
         resourceHelper.CheckRepository();
         
         var builder = WebApplication.CreateBuilder();
-        if (!int.TryParse(configuration["HostPort"], NumberStyles.Any, new NumberFormatInfo(), out var hostPort))
-        {
-            throw new Exception("Host port is missing");
-        }
-        
         builder.WebHost.ConfigureKestrel(options =>
         {
             options.Listen(IPAddress.Any, hostPort);
@@ -48,12 +57,6 @@ public static class Program
         
         app = builder.Build();
         app.UseWebSockets();
-
-        var accessToken = configuration["AccessToken"];
-        if (string.IsNullOrEmpty(accessToken))
-        {
-            throw new Exception("Access token is missing");
-        }
 
         var cs = new CancellationTokenSource();
         var server = new Core.Server(resourceHelper, accessToken, cs.Token);
@@ -79,7 +82,37 @@ public static class Program
         app.MapDefaultControllerRoute();
         app.MapRazorPages();
 
-        return false;
+        return true;
+    }
+
+    private static void ExtractOptions(IConfiguration configuration, int? port, string? token,
+        [AllowNull] ref string repoPath, out string accessToken, out int hostPort)
+    {
+        repoPath ??= configuration["RepositoryPath"];
+        if (port is null)
+        {
+            if (!int.TryParse(configuration["HostPort"], NumberStyles.Any, new NumberFormatInfo(), out hostPort))
+            {
+                throw new Exception("Host port is missing");
+            }
+        }
+        else
+        {
+            hostPort = (int)port;
+        }
+        
+        if (token is null)
+        {
+            accessToken = configuration["AccessToken"];
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                throw new Exception("Access token is missing");
+            }
+        }
+        else
+        {
+            accessToken = token;
+        }
     }
 
     private static IConfigurationRoot ConfigApplication()
@@ -101,35 +134,32 @@ public static class Program
         return configuration;
     }
 
-    private static bool CheckCommandLine(string[] args)
+    private static (bool success, string? repoPath, string? accessToken, int? hostPort) CheckCommandLine(string[] args)
     {
-        var verbose = 0;
-        var names = new List<string>();
-        bool show_help = false;
-        int repeat = 1;
+        string? repoPath = null;
+        string? accessToken = null;
+        int? hostPort = null;
+        
+        var showHelp = false;
 
         var p = new OptionSet()
         {
             {
-                "n|name=", "the {NAME} of someone to greet.",
-                v => names.Add(v)
+                "r|repo=", "Set RepositoryPath, by default application reading it from appsettings.json.",
+                r => repoPath = r
             },
             {
-                "r|repeat=",
-                "the number of {TIMES} to repeat the greeting.\n" +
-                "this must be an integer.",
-                (int v) => repeat = v
+                "t|token=", "Set access token, by default application reading it from appsettings.json.",
+                t => accessToken = t
             },
             {
-                "v", "increase debug message verbosity",
-                v =>
-                {
-                    if (v != null) ++verbosity;
-                }
+                "p|port=",
+                "Host port for listening, by default application reading it from appsettings.json.",
+                (int p) => hostPort = p
             },
             {
-                "h|help", "show this message and exit",
-                v => show_help = v != null
+                "h|help", "Show help",
+                _ => showHelp = true
             },
         };
 
@@ -140,55 +170,30 @@ public static class Program
         }
         catch (OptionException e)
         {
-            Console.Write("greet: ");
+            Console.Write("Error: ");
             Console.WriteLine(e.Message);
-            Console.WriteLine("Try `greet --help' for more information.");
-            return true;
+            Console.WriteLine("Try `--help' for more information.");
+            return (false, null, null, null);
         }
 
-        if (show_help)
+        if (showHelp)
         {
             ShowHelp(p);
-            return true;
+            return (false, null, null, null);
         }
 
-        string message;
-        if (extra.Count > 0)
-        {
-            message = string.Join(" ", extra.ToArray());
-            Debug("Using new message: {0}", message);
-        }
-        else
-        {
-            message = "Hello {0}!";
-            Debug("Using default message: {0}", message);
-        }
-
-        foreach (var name in names)
-        {
-            for (int i = 0; i < repeat; ++i)
-                Console.WriteLine(message, name);
-        }
-
-        return false;
+        if (extra.Count <= 0) return (true, repoPath, accessToken, hostPort);
+        
+        var message = string.Join(" ", extra.ToArray());
+        Log.Information("Using new message: {Message}", message);
+        return (true, repoPath, accessToken, hostPort);
     }
 
-    static void ShowHelp (OptionSet p)
+    private static void ShowHelp (OptionSet p)
     {
-        Console.WriteLine ("Usage: greet [OPTIONS]+ message");
-        Console.WriteLine ("Greet a list of individuals with an optional message.");
-        Console.WriteLine ("If no message is specified, a generic greeting is used.");
+        Console.WriteLine ("Usage: [OPTIONS]+ message");
         Console.WriteLine ();
         Console.WriteLine ("Options:");
         p.WriteOptionDescriptions (Console.Out);
-    }
-   
-    static int verbosity;
-    static void Debug (string format, params object[] args)
-    {
-        if (verbosity > 0) {
-            Console.Write ("# ");
-            Console.WriteLine (format, args);
-        }
     }
 }

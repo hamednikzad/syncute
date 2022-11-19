@@ -5,7 +5,7 @@
   },
   "profiles": {
     "SynCute.Server": {
-      "commandLineArgs": "--helpppp",
+      "commandLineArgs1": "-p 3000 -token AASFASF -repo C:/asdsd",
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
