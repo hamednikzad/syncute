@@ -18,6 +18,8 @@ public class Client : IDisposable
     private ClientWebSocket _socket = null!;
     private bool _isOpen;
 
+    private List<Resource> _currentResources;
+    
     public Client(IResourceHelper resourceHelper, string remoteAddress, string accessToken, CancellationToken cancellationToken)
     {
         _resourceHelper = resourceHelper;
@@ -26,6 +28,7 @@ public class Client : IDisposable
         _cancellationToken = cancellationToken;
 
         _messageProcessor = new ClientMessageProcessor(_resourceHelper, Send, Send);
+        _currentResources = new List<Resource>();
     }
 
     #region Repository Related
@@ -52,6 +55,12 @@ public class Client : IDisposable
 
                 if (!attr.HasFlag(FileAttributes.Directory))
                 {
+                    if (_currentResources.Any(r => r.FullPath == args.FullPath))
+                    {
+                        Log.Information("Watcher: file {Name} already synced", args.FullPath);
+                        return;
+                    }
+                    
                     await _messageProcessor.UploadResources(new List<Resource>()
                     {
                         _resourceHelper.GetResourceByFullPath(args.FullPath)
@@ -180,6 +189,8 @@ public class Client : IDisposable
 
     public async Task Start()
     {
+        _currentResources = _resourceHelper.GetAllFilesWithChecksum();
+        
         ConfigRepositoryWatcher();
         
         await Connect();
@@ -192,7 +203,9 @@ public class Client : IDisposable
 
     private async Task ProcessBinaryMessage(MemoryStream ms)
     {
-        await _resourceHelper.WriteResource(ms);
+        var newResource = await _resourceHelper.WriteResource(ms);
+        
+        _currentResources.Add(newResource);
     }
 
     public void Dispose()
